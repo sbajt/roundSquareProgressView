@@ -11,6 +11,7 @@
             <flag name="center" value="17"/>
             <flag name="right" value="5"/>
         </attr>
+        <attr name="text_size" format="dimension" />
         <attr name="progress_percent" format="integer" />
         <attr name="progress_width" format="dimension" />
         <attr name="progress_color" format="color" />

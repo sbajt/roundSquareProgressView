@@ -10,10 +10,11 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import com.scorealarm.squareprogress.R
+import kotlin.math.roundToInt
 
 class RoundSquareProgressView
 @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) :
-    View(context, attrs, defStyleAttr) {
+        View(context, attrs, defStyleAttr) {
 
     private val TAG = RoundSquareProgressView::class.java.canonicalName
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -21,6 +22,7 @@ class RoundSquareProgressView
     }
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
+        setStrokeJoin(Paint.Join.ROUND)
     }
     private val progressBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -36,83 +38,85 @@ class RoundSquareProgressView
     private var text = ""
     private var r = 0f
     private var progressStartAngle = 0
+    private var textSize = 15f
     private var textGravity = Gravity.NO_GRAVITY
 
     init {
         context.theme.obtainStyledAttributes(
-            attrs,
-            R.styleable.RoundSquareProgressView,
-            defStyleAttr,
-            defStyleAttr
+                attrs,
+                R.styleable.RoundSquareProgressView,
+                defStyleAttr,
+                defStyleAttr
         )
-            .apply {
-                try {
-                    setRadius(getDimension(R.styleable.RoundSquareProgressView_radius, 0f))
-                    setBgColor(
-                        getColor(
-                            R.styleable.RoundSquareProgressView_bg_color,
-                            Color.TRANSPARENT
+                .apply {
+                    try {
+                        setRadius(getDimension(R.styleable.RoundSquareProgressView_radius, 0f))
+                        setBgColor(
+                                getColor(
+                                        R.styleable.RoundSquareProgressView_bg_color,
+                                        Color.TRANSPARENT
+                                )
                         )
-                    )
-                    if (!isInEditMode) {
-                        setTextFont(
-                            getString(R.styleable.RoundSquareProgressView_font_name)
-                                ?: ""
+                        if (!isInEditMode) {
+                            setTextFont(
+                                    getString(R.styleable.RoundSquareProgressView_font_name)
+                                            ?: ""
+                            )
+                        }
+                        setText(getString(R.styleable.RoundSquareProgressView_text) ?: "")
+                        setTextColor(
+                                getColor(
+                                        R.styleable.RoundSquareProgressView_text_color,
+                                        Color.WHITE
+                                )
                         )
+                        setTextGravity(
+                                getInt(
+                                        R.styleable.RoundSquareProgressView_text_gravity,
+                                        Gravity.NO_GRAVITY
+                                )
+                        )
+                        setTextSize(getDimension(R.styleable.RoundSquareProgressView_text_size, 0f))
+                        setProgressWidth(
+                                getDimension(
+                                        R.styleable.RoundSquareProgressView_progress_width,
+                                        12f
+                                )
+                        )
+                        setProgressPercent(
+                                getFloat(
+                                        R.styleable.RoundSquareProgressView_progress_percent,
+                                        0f
+                                )
+                        )
+                        setProgressColor(
+                                getColor(
+                                        R.styleable.RoundSquareProgressView_progress_color,
+                                        Color.TRANSPARENT
+                                )
+                        )
+                        setProgressBgToStaticColor(
+                                getColor(
+                                        R.styleable.RoundSquareProgressView_progress_bg_color_static,
+                                        Color.LTGRAY
+                                )
+                        )
+                        setProgressBgToDynamicColor(
+                                getColor(
+                                        R.styleable.RoundSquareProgressView_progress_bg_color_dynamic,
+                                        Color.RED
+                                )
+                        )
+                        setProgressStartAngle(
+                                getInt(
+                                        R.styleable.RoundSquareProgressView_progress_start_angle,
+                                        0
+                                )
+                        )
+                    } finally {
+                        recycle()
                     }
-                    setText(getString(R.styleable.RoundSquareProgressView_text) ?: "")
-                    setTextColor(
-                        getColor(
-                            R.styleable.RoundSquareProgressView_text_color,
-                            Color.WHITE
-                        )
-                    )
-                    setTextGravity(
-                        getInt(
-                            R.styleable.RoundSquareProgressView_text_gravity,
-                            Gravity.NO_GRAVITY
-                        )
-                    )
-                    setProgressWidth(
-                        getDimension(
-                            R.styleable.RoundSquareProgressView_progress_width,
-                            12f
-                        )
-                    )
-                    setProgressPercent(
-                        getFloat(
-                            R.styleable.RoundSquareProgressView_progress_percent,
-                            0f
-                        )
-                    )
-                    setProgressColor(
-                        getColor(
-                            R.styleable.RoundSquareProgressView_progress_color,
-                            Color.GRAY
-                        )
-                    )
-                    setProgressBgToStaticColor(
-                        getColor(
-                            R.styleable.RoundSquareProgressView_progress_bg_color_static,
-                            Color.LTGRAY
-                        )
-                    )
-                    setProgressBgToDynamicColor(
-                        getColor(
-                            R.styleable.RoundSquareProgressView_progress_bg_color_dynamic,
-                            Color.RED
-                        )
-                    )
-                    setProgressStartAngle(
-                        getInt(
-                            R.styleable.RoundSquareProgressView_progress_start_angle,
-                            0
-                        )
-                    )
-                } finally {
-                    recycle()
                 }
-            }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -187,7 +191,13 @@ class RoundSquareProgressView
     }
 
     fun setRadius(radius: Float) {
-        r = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, radius, resources.displayMetrics)
+        r = radius
+        invalidate()
+        requestLayout()
+    }
+
+    fun setProgressStartAngle(angle: Int) {
+        progressStartAngle = angle
         invalidate()
         requestLayout()
     }
@@ -195,26 +205,32 @@ class RoundSquareProgressView
     fun setProgressPercent(percent: Float) {
         when (percent.toInt()) {
             -1, 0 -> {
-                progressPercent = -1f
                 if (progressBgPaint.color != progressBgColorStatic) {
                     animateProgressBgToStaticColor()
-                } else {
+                }
+                if (isInEditMode) {
+                    progressPercent = percent
                     invalidate()
+                } else {
+                    animateProgressChange(percent)
                 }
             }
             in 1..100 -> {
                 if (progressBgPaint.color != progressBgColorDynamic) {
                     animateProgressBgToDynamicColor()
                 }
-                progressPercent = percent
-                animateProgressChange(percent)
+                if (isInEditMode) {
+                    progressPercent = percent
+                    invalidate()
+                } else {
+                    animateProgressChange(percent)
+                }
             }
             else -> {
                 progressPercent = -1f
+                invalidate()
                 if (progressBgPaint.color != progressBgColorStatic) {
                     animateProgressBgToStaticColor()
-                } else {
-                    invalidate()
                 }
             }
         }
@@ -228,11 +244,7 @@ class RoundSquareProgressView
 
     fun setTextFont(fontName: String?) {
         fontName?.apply {
-            if (fontName.isBlank()) {
-                textPaint.typeface = Typeface.DEFAULT
-            } else {
-                textPaint.typeface = Typeface.createFromAsset(context.assets, "fonts/$fontName")
-            }
+            textPaint.typeface = Typeface.createFromAsset(context.assets, "fonts/$fontName")
             invalidate()
             requestLayout()
         }
@@ -244,14 +256,18 @@ class RoundSquareProgressView
         requestLayout()
     }
 
-    fun setTextGravity(gravity: Int) {
-        textGravity = gravity
+    fun setTextSize(size: Float) {
+        textSize = size
+        invalidate()
+        requestLayout()
     }
 
-    fun setProgressStartAngle(angle: Int) {
-        progressStartAngle = angle
+    fun setTextGravity(gravity: Int) {
+        textGravity = gravity
         invalidate()
+        requestLayout()
     }
+
 
     private fun animateProgressBgToDynamicColor() {
         ValueAnimator.ofArgb(progressBgPaint.color, progressBgColorDynamic).apply {
@@ -279,38 +295,45 @@ class RoundSquareProgressView
         val progressPath = createProgressPath()
         c.drawPath(progressPath, bgPaint)
         c.drawPath(progressPath, progressBgPaint)
-        c.drawPath(createProgressPathSegment(progressPath), progressPaint)
+        val segment = createProgressPathSegment(progressPath)
+        val bounds = RectF()
+        segment.computeBounds(bounds, true)
+        progressPaint.shader = LinearGradient(bounds.left, bounds.top, bounds.right, Math.min(bounds.width(), bounds.height()), context.getColor(R.color.progress), context.getColor(R.color.progressDark), Shader.TileMode.CLAMP)
+        c.drawPath(segment, progressPaint)
 
         return bitmap
     }
 
     private fun createProgressPath(): Path {
+        val radius = if (r > 0f && r < (Math.min(width, height) / 2f)) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, r, resources.displayMetrics) else 0f
         val path = Path()
-        val halfProgressWidth = progressPaint.strokeWidth / 2f
-        val rectF = RectF(viewBounds)
-        rectF.inset(halfProgressWidth, halfProgressWidth)
-        path.addRoundRect(rectF, r, r, Path.Direction.CW)
-
+        path.addRoundRect(RectF(viewBounds).apply {
+            inset(
+                    progressPaint.strokeWidth / 2f,
+                    progressPaint.strokeWidth / 2f
+            )
+        }, radius, radius, Path.Direction.CCW)
+        path.close()
         return path
     }
 
     private fun createProgressPathSegment(path: Path): Path {
         val pathSegment = Path()
-        val pathSegment2 = Path()
+        val pathMeasure = PathMeasure(path, false)
+        val pathLength = pathMeasure.length
         if (progressPercent.toInt() in 1..100) {
-            val pathMeasure = PathMeasure(path, false)
-            val pathLength = pathMeasure.length
-            val offset = pathLength / 360f * progressStartAngle
-            val progressPercent2: Float
+            val offset = pathLength / 360f * progressStartAngle + pathLength / 360f * 26f
             pathMeasure.getSegment(
-                offset,
-                pathLength * progressPercent / 100f + offset,
-                pathSegment,
-                true
+                    offset,
+                    pathLength / 100f * progressPercent + offset,
+                    pathSegment,
+                    true
             )
             if (progressPercent * pathLength / 100f > pathLength - offset) {
-                progressPercent2 = progressPercent - (pathLength - offset) / (pathLength / 100f)
-                pathMeasure.getSegment(0f, pathLength * progressPercent2 / 100f, pathSegment2, true)
+                val partLength = (pathLength / 100f).roundToInt()
+                val partsCount = progressPercent - (pathLength - offset) / pathLength * 100
+                val pathSegment2 = Path()
+                pathMeasure.getSegment(0f, partsCount * partLength, pathSegment2, true)
                 pathSegment.addPath(pathSegment2)
             }
         }
@@ -332,27 +355,35 @@ class RoundSquareProgressView
 
     private fun drawText(canvas: Canvas?) {
         val tempRect = Rect()
-        textPaint.textSize = 15f // help precision to stay the same when dividing numbers
-        textPaint.getTextBounds(text, 0, text.length, tempRect)
         val offset = progressPaint.strokeWidth + TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            textPadding,
-            resources.displayMetrics
+                TypedValue.COMPLEX_UNIT_DIP,
+                textPadding,
+                resources.displayMetrics
         )
-        if (!tempRect.isEmpty) {
-            val v1 = (width - 2 * offset) / (tempRect.width().toFloat() + textPadding)
-            val v2 = (height - 2 * offset) / tempRect.height().toFloat()
-            textPaint.textSize *= Math.min(v1, v2)
+        textPaint.getTextBounds(text, 0, text.length, tempRect)
+        if (isInEditMode) {
+            if (textSize > 0f)
+                textPaint.textSize = textSize
+            else if (textSize <= 0f)
+                textPaint.textSize = TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_SP,
+                        28f,
+                        resources.displayMetrics
+                )
+        } else {
+                val v1 = (viewBounds.width().toFloat() - 2f * offset) / tempRect.width().toFloat()
+                val v2 = (viewBounds.height().toFloat() - 2f * offset) / tempRect.height().toFloat()
+                textPaint.textSize *= v1.coerceAtMost(v2)
         }
         var x: Float
-        val y = (viewBounds.height() - (textPaint.descent() + textPaint.ascent())) / 2
+        val y = (viewBounds.height() - (textPaint.descent() + textPaint.ascent())) / 2f
         textPaint.getTextBounds(text, 0, text.length, tempRect)
         when (textGravity) {
             Gravity.LEFT -> {
                 x = viewBounds.left + offset
             }
             Gravity.CENTER -> {
-                x = viewBounds.centerX() - (tempRect.width() / 2f)
+                x = viewBounds.width() / 2f - (tempRect.width() / 2f)
             }
             Gravity.RIGHT -> {
                 x = viewBounds.right - offset - tempRect.width()
@@ -363,10 +394,10 @@ class RoundSquareProgressView
         }
         for (c in text) {
             canvas?.drawText(
-                c.toString(),
-                x,
-                y,
-                textPaint
+                    c.toString(),
+                    x,
+                    y,
+                    textPaint
             )
             x += textPaint.measureText(c.toString())
         }

@@ -22,7 +22,7 @@ class RoundSquareProgressView
     }
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        setStrokeJoin(Paint.Join.ROUND)
+        setStrokeJoin(Paint.Join.MITER)
     }
     private val progressBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -40,6 +40,7 @@ class RoundSquareProgressView
     private var progressStartAngle = 0
     private var textSize = 15f
     private var textGravity = Gravity.NO_GRAVITY
+    private var isTextSizeCustom = false
 
     init {
         context.theme.obtainStyledAttributes(
@@ -257,7 +258,12 @@ class RoundSquareProgressView
     }
 
     fun setTextSize(size: Float) {
-        textSize = size
+        if (size > 0f) {
+            textSize = size
+            isTextSizeCustom = true
+        } else {
+            isTextSizeCustom = false
+        }
         invalidate()
         requestLayout()
     }
@@ -296,9 +302,6 @@ class RoundSquareProgressView
         c.drawPath(progressPath, bgPaint)
         c.drawPath(progressPath, progressBgPaint)
         val segment = createProgressPathSegment(progressPath)
-        val bounds = RectF()
-        segment.computeBounds(bounds, true)
-        progressPaint.shader = LinearGradient(bounds.left, bounds.top, bounds.right, Math.min(bounds.width(), bounds.height()), context.getColor(R.color.progress), context.getColor(R.color.progressDark), Shader.TileMode.CLAMP)
         c.drawPath(segment, progressPaint)
 
         return bitmap
@@ -312,7 +315,7 @@ class RoundSquareProgressView
                     progressPaint.strokeWidth / 2f,
                     progressPaint.strokeWidth / 2f
             )
-        }, radius, radius, Path.Direction.CCW)
+        }, radius, radius, Path.Direction.CW)
         path.close()
         return path
     }
@@ -322,7 +325,7 @@ class RoundSquareProgressView
         val pathMeasure = PathMeasure(path, false)
         val pathLength = pathMeasure.length
         if (progressPercent.toInt() in 1..100) {
-            val offset = pathLength / 360f * progressStartAngle + pathLength / 360f * 26f
+            val offset = pathLength / 360f * (progressStartAngle + 1) + pathLength / 360f * 26f
             pathMeasure.getSegment(
                     offset,
                     pathLength / 100f * progressPercent + offset,
@@ -330,13 +333,16 @@ class RoundSquareProgressView
                     true
             )
             if (progressPercent * pathLength / 100f > pathLength - offset) {
-                val partLength = (pathLength / 100f).roundToInt()
-                val partsCount = progressPercent - (pathLength - offset) / pathLength * 100
+                val partLength = pathLength / 100f
+                val partsCount = (progressPercent - (pathLength - offset) / pathLength * 100f).toInt()
                 val pathSegment2 = Path()
                 pathMeasure.getSegment(0f, partsCount * partLength, pathSegment2, true)
                 pathSegment.addPath(pathSegment2)
             }
         }
+        val bounds = RectF()
+        pathSegment.computeBounds(bounds, true)
+        progressPaint.shader = LinearGradient(bounds.left, bounds.top, bounds.right, Math.min(bounds.width(), bounds.height()), context.getColor(R.color.progress), context.getColor(R.color.progressDark), Shader.TileMode.CLAMP)
 
         return pathSegment
     }
@@ -362,18 +368,22 @@ class RoundSquareProgressView
         )
         textPaint.getTextBounds(text, 0, text.length, tempRect)
         if (isInEditMode) {
-            if (textSize > 0f)
+            if (isTextSizeCustom)
                 textPaint.textSize = textSize
-            else if (textSize <= 0f)
+            else
                 textPaint.textSize = TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_SP,
                         28f,
                         resources.displayMetrics
                 )
         } else {
+            if (isTextSizeCustom)
+                textPaint.textSize = textSize
+            else {
                 val v1 = (viewBounds.width().toFloat() - 2f * offset) / tempRect.width().toFloat()
                 val v2 = (viewBounds.height().toFloat() - 2f * offset) / tempRect.height().toFloat()
                 textPaint.textSize *= v1.coerceAtMost(v2)
+            }
         }
         var x: Float
         val y = (viewBounds.height() - (textPaint.descent() + textPaint.ascent())) / 2f

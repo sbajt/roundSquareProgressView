@@ -204,7 +204,7 @@ class RoundSquareProgressView
 
     fun setProgressPercent(percent: Float) {
         when (percent.toInt()) {
-            -1, 0 -> {
+            -1 -> {
                 if (progressBgPaint.color != progressBgColorStatic) {
                     animateProgressBgToStaticColor()
                 }
@@ -215,7 +215,7 @@ class RoundSquareProgressView
                     animateProgressChange(percent)
                 }
             }
-            in 1..100 -> {
+            in 0..100 -> {
                 if (progressBgPaint.color != progressBgColorDynamic) {
                     animateProgressBgToDynamicColor()
                 }
@@ -342,7 +342,7 @@ class RoundSquareProgressView
             if (progressPercent * pathLength / 100f > pathLength - offset) {
                 val partLength = pathLength / 100f
                 val partsCount =
-                    (progressPercent - (pathLength - offset) / pathLength * 100f).toInt()
+                    progressPercent - (pathLength - offset) / pathLength * 100f
                 val pathSegment2 = Path()
                 pathMeasure.getSegment(0f, partsCount * partLength, pathSegment2, true)
                 pathSegment.addPath(pathSegment2)
